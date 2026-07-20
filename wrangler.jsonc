@@ -1,0 +1,12 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // Cloudflare project name. Must be lowercase with hyphens only.
+  "name": "cooks-property-services",
+  "compatibility_date": "2026-07-19",
+  // Pure static-asset deploy: `next build` (output: "export") writes the
+  // whole site as static HTML/CSS/JS/images into out/, and this Worker has
+  // no script of its own, it just serves that folder from Cloudflare's edge.
+  "assets": {
+    "directory": "./out"
+  }
+}

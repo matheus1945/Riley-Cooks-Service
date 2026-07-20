@@ -65,32 +65,36 @@ fallbacks because they can't respect consent.
 - **Photos:** `public/images/` — all real Cooks Property Services job photos.
   Replace/extend with more real photos only; no stock imagery.
 
-## Deploying to Cloudflare Pages
+## Deploying to Cloudflare
 
 The site is a **fully static export** (`output: "export"` in `next.config.ts`).
 Every route is prerendered to HTML, so there is no server runtime, no adapter,
-and nothing to keep warm. `next build` writes a plain `out/` folder that
-Cloudflare Pages serves straight from the edge.
+and nothing to keep warm. `next build` writes a plain `out/` folder.
 
-### Option A — Connect the Git repo (recommended)
+`wrangler.jsonc` at the repo root points Cloudflare's asset hosting at that
+folder (`assets.directory: "./out"`) with no Worker script, so this deploys as
+a pure static site on Cloudflare's edge.
 
-In the Cloudflare dashboard: **Workers & Pages → Create → Pages → Connect to
-Git**, pick this repo, then set:
+### Option A — Connect the Git repo (current Cloudflare "Workers" onboarding)
 
-| Setting | Value |
+In the Cloudflare dashboard: **Compute (Workers) → Create → Import a
+repository**, pick this repo, then on the "Set up your application" screen:
+
+| Field | Value |
 | --- | --- |
-| Framework preset | Next.js (Static HTML Export) — or "None" |
+| Project name | `cooks-property-services` (must match `name` in `wrangler.jsonc`) |
 | Build command | `npm run build` |
-| Build output directory | `out` |
-| Node version | `24` (matches `.nvmrc`; set `NODE_VERSION=24` if needed) |
+| Deploy command | `npx wrangler deploy` (pre-filled — leave as is) |
 
-**Environment variables (Production _and_ Preview):** these are inlined at
-**build time**, so they must be set in the Pages project, not just in a local
-`.env.local` (which is git-ignored and never uploaded):
+Before clicking **Deploy**, open **Advanced settings** and set:
 
-- `NEXT_PUBLIC_SITE_URL` — production URL (e.g. `https://www.cookspropertysvcs.com`)
-- `NEXT_PUBLIC_FORM_ENDPOINT` — the quote-form webhook
-- Any analytics IDs you want live (`NEXT_PUBLIC_GTM_ID`, etc.)
+- **Node version:** `24` (matches `.nvmrc`; add env var `NODE_VERSION=24` if there's no dedicated field)
+- **Environment variables (Production _and_ Preview)** — these are inlined at
+  **build time**, so they must be set here, not just in the git-ignored local
+  `.env.local`:
+  - `NEXT_PUBLIC_SITE_URL` — production URL (e.g. `https://www.cookspropertysvcs.com`)
+  - `NEXT_PUBLIC_FORM_ENDPOINT` — the quote-form webhook
+  - Any analytics IDs you want live (`NEXT_PUBLIC_GTM_ID`, etc.)
 
 Every push to the production branch rebuilds and redeploys automatically.
 
@@ -98,7 +102,7 @@ Every push to the production branch rebuilds and redeploys automatically.
 
 ```bash
 npm run build
-npx wrangler pages deploy out --project-name cooks-property-services
+npx wrangler deploy
 ```
 
 Set the same build-time env vars locally (or in `.env.local`) before building,
