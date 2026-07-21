@@ -13,16 +13,37 @@ type QuoteFormProps = {
   location: string;
 };
 
-type FieldName = "name" | "phone" | "service" | "area" | "email" | "message";
+type FieldName = "name" | "phone" | "services" | "address" | "email" | "message";
 type Errors = Partial<Record<FieldName, string>>;
 type Status = "idle" | "submitting" | "success" | "error";
 
 const MIN_FILL_TIME_MS = 3000;
 
+const WINDOW_CLEANING_SLUG = "window-cleaning";
+
+/** Checkbox options for the multi-select services field. */
+const serviceOptions = [
+  ...services.map(({ slug, name }) => ({ slug, name })),
+  { slug: "other", name: "Other" },
+];
+
+/** Residential properties rarely run past a few storeys, so this stays short. */
+const storiesOptions = ["1", "2", "3", "4+"];
+
+/** Riley's requested bucket shape for window count on the quote form. */
+const windowCountOptions = ["0–10", "11–20", "21–30", "31–40", "41+"];
+
 const inputClasses = cn(
   "w-full min-h-11 rounded-(--radius-btn) border border-mist-200 bg-white px-3.5 py-2.5 text-base text-ink-900",
   "placeholder:text-ink-500 focus:border-blue-500",
   "aria-[invalid=true]:border-red-600",
+);
+
+const chipClasses = cn(
+  "inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium select-none",
+  "border-mist-200 bg-white text-ink-700 transition-colors hover:border-blue-300",
+  "has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50 has-[:checked]:text-blue-700",
+  "has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-blue-500",
 );
 
 function validateField(name: FieldName, value: string): string | undefined {
@@ -34,8 +55,6 @@ function validateField(name: FieldName, value: string): string | undefined {
       return isValidCanadianPhone(value)
         ? undefined
         : "That doesn't look like a valid Canadian phone number.";
-    case "service":
-      return value ? undefined : "Please choose a service.";
     case "email":
       if (!value.trim()) return undefined; // optional
       return /^\S+@\S+\.\S+$/.test(value)
@@ -49,9 +68,12 @@ function validateField(name: FieldName, value: string): string | undefined {
 export function QuoteForm({ location }: QuoteFormProps) {
   const [status, setStatus] = useState<Status>("idle");
   const [errors, setErrors] = useState<Errors>({});
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const formRef = useRef<HTMLFormElement>(null);
   const mountedAt = useRef<number | null>(null);
   const started = useRef(false);
+
+  const showWindowCleaningFields = selectedServices.includes(WINDOW_CLEANING_SLUG);
 
   useEffect(() => {
     mountedAt.current = Date.now();
@@ -62,6 +84,13 @@ export function QuoteForm({ location }: QuoteFormProps) {
       started.current = true;
       track("form_start", { location });
     }
+  };
+
+  const toggleService = (slug: string) => {
+    setSelectedServices((prev) =>
+      prev.includes(slug) ? prev.filter((item) => item !== slug) : [...prev, slug],
+    );
+    setErrors((prev) => (prev.services ? { ...prev, services: undefined } : prev));
   };
 
   const handleBlur = (event: React.FocusEvent<HTMLElement>) => {
@@ -79,24 +108,36 @@ export function QuoteForm({ location }: QuoteFormProps) {
     event.preventDefault();
     const form = event.currentTarget;
     const data = new FormData(form);
+    const serviceNames = selectedServices.map(
+      (slug) => serviceOptions.find((option) => option.slug === slug)?.name ?? slug,
+    );
     const values = {
       name: String(data.get("name") ?? ""),
       phone: String(data.get("phone") ?? ""),
-      service: String(data.get("service") ?? ""),
-      area: String(data.get("area") ?? ""),
+      address: String(data.get("address") ?? ""),
       email: String(data.get("email") ?? ""),
       message: String(data.get("message") ?? ""),
+      stories: String(data.get("stories") ?? ""),
+      windowCount: String(data.get("windowCount") ?? ""),
     };
 
     const nextErrors: Errors = {};
-    (Object.keys(values) as FieldName[]).forEach((field) => {
+    (["name", "phone", "address", "email", "message"] as const).forEach((field) => {
       const message = validateField(field, values[field]);
       if (message) nextErrors[field] = message;
     });
+    if (selectedServices.length === 0) {
+      nextErrors.services = "Please choose at least one service.";
+    }
     setErrors(nextErrors);
-    const firstInvalid = (Object.keys(nextErrors) as FieldName[])[0];
+    const fieldOrder: FieldName[] = ["name", "phone", "services", "address", "email", "message"];
+    const firstInvalid = fieldOrder.find((field) => nextErrors[field]);
     if (firstInvalid) {
-      (form.elements.namedItem(firstInvalid) as HTMLElement | null)?.focus();
+      if (firstInvalid === "services") {
+        form.querySelector<HTMLInputElement>('input[name="services"]')?.focus();
+      } else {
+        (form.elements.namedItem(firstInvalid) as HTMLElement | null)?.focus();
+      }
       return;
     }
 
@@ -129,6 +170,9 @@ export function QuoteForm({ location }: QuoteFormProps) {
         },
         body: JSON.stringify({
           ...values,
+          // Comma-joined so it drops straight into the n8n email template
+          // like every other field, instead of arriving as a raw array.
+          services: serviceNames.join(", "),
           source: "cookspropertysvcs.com",
           submittedFrom: location,
         }),
@@ -136,7 +180,7 @@ export function QuoteForm({ location }: QuoteFormProps) {
       if (!response.ok) throw new Error(`Form endpoint returned ${response.status}`);
       setStatus("success");
       // Primary conversion — fires only after a confirmed successful submit.
-      track("generate_lead", { location, service: values.service });
+      track("generate_lead", { location, services: serviceNames.join(", ") });
     } catch {
       setStatus("error");
     }
@@ -168,6 +212,7 @@ export function QuoteForm({ location }: QuoteFormProps) {
 
   return (
     <form
+      id="quote-form"
       ref={formRef}
       onSubmit={handleSubmit}
       onFocusCapture={handleStart}
@@ -222,47 +267,80 @@ export function QuoteForm({ location }: QuoteFormProps) {
           )}
         </div>
 
-        <div>
-          <label htmlFor="quote-service" className="mb-1.5 block text-sm font-medium text-ink-900">
-            Service <span aria-hidden="true" className="text-red-700">*</span>
-          </label>
-          <select
-            id="quote-service"
-            name="service"
-            required
-            aria-required="true"
-            defaultValue=""
-            aria-invalid={Boolean(errors.service)}
-            aria-describedby={errors.service ? "quote-service-error" : undefined}
-            onBlur={handleBlur}
-            className={inputClasses}
-          >
-            <option value="" disabled>
-              Choose a service…
-            </option>
-            {services.map((service) => (
-              <option key={service.slug} value={service.name}>
-                {service.name}
-              </option>
-            ))}
-            <option value="Other">Other</option>
-          </select>
-          {errors.service && (
-            <p id="quote-service-error" className="mt-1.5 text-sm text-red-700">
-              {errors.service}
-            </p>
-          )}
+        <div className="md:col-span-2">
+          <fieldset>
+            <legend className="mb-1.5 block text-sm font-medium text-ink-900">
+              Services <span aria-hidden="true" className="text-red-700">*</span>
+            </legend>
+            <div className="flex flex-wrap gap-2">
+              {serviceOptions.map((option) => (
+                <label key={option.slug} className={chipClasses}>
+                  <input
+                    type="checkbox"
+                    name="services"
+                    value={option.slug}
+                    checked={selectedServices.includes(option.slug)}
+                    onChange={() => toggleService(option.slug)}
+                    aria-describedby={errors.services ? "quote-services-error" : undefined}
+                    className="sr-only"
+                  />
+                  {option.name}
+                </label>
+              ))}
+            </div>
+            {errors.services && (
+              <p id="quote-services-error" className="mt-1.5 text-sm text-red-700">
+                {errors.services}
+              </p>
+            )}
+          </fieldset>
         </div>
 
+        {showWindowCleaningFields && (
+          <div className="grid gap-5 sm:grid-cols-2 md:col-span-2">
+            <div>
+              <label htmlFor="quote-stories" className="mb-1.5 block text-sm font-medium text-ink-900">
+                Stories <span className="font-normal text-ink-500">(optional)</span>
+              </label>
+              <select id="quote-stories" name="stories" defaultValue="" className={inputClasses}>
+                <option value="" disabled>
+                  Select…
+                </option>
+                {storiesOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="quote-window-count" className="mb-1.5 block text-sm font-medium text-ink-900">
+                Number of windows <span className="font-normal text-ink-500">(optional)</span>
+              </label>
+              <select id="quote-window-count" name="windowCount" defaultValue="" className={inputClasses}>
+                <option value="" disabled>
+                  Select…
+                </option>
+                {windowCountOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
+
         <div>
-          <label htmlFor="quote-area" className="mb-1.5 block text-sm font-medium text-ink-900">
-            Area / Neighbourhood
+          <label htmlFor="quote-address" className="mb-1.5 block text-sm font-medium text-ink-900">
+            Address
           </label>
           <input
-            id="quote-area"
-            name="area"
+            id="quote-address"
+            name="address"
             type="text"
-            autoComplete="address-level2"
+            autoComplete="street-address"
             onBlur={handleBlur}
             className={inputClasses}
           />

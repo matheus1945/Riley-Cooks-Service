@@ -23,9 +23,9 @@ export function Footer() {
           <Image
             src="/images/logo-white.png"
             alt={siteConfig.name}
-            width={125}
-            height={60}
-            className="h-12 w-auto"
+            width={175}
+            height={121}
+            className="h-16 w-auto"
           />
           <p className="mt-4 text-sm leading-relaxed text-mist-200">
             Professional window, gutter, and exterior cleaning across Greater

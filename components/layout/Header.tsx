@@ -69,14 +69,13 @@ export function Header() {
           aria-label={`${siteConfig.name} home`}
         >
           {/* White logo treatment: the header always sits on navy. */}
-          {/* TODO: replace with final logo SVG when available */}
           <Image
             src="/images/logo-white.png"
             alt={siteConfig.name}
-            width={104}
-            height={50}
+            width={175}
+            height={121}
             priority
-            className="h-10 w-auto md:h-12"
+            className="h-14 w-auto md:h-16"
           />
         </Link>
 
