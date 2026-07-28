@@ -22,7 +22,7 @@ export const galleryPairs: GalleryPair[] = [
   {
     id: "paver-driveway",
     service: "Pressure Washing",
-    label: "Paver driveway",
+    label: "Paver Driveway",
     before: {
       src: "/images/before-after/paver-before.jpg",
       alt: "Paver driveway covered in leaves, moss, and grime before pressure washing",
@@ -35,7 +35,7 @@ export const galleryPairs: GalleryPair[] = [
   {
     id: "deck",
     service: "Pressure Washing",
-    label: "Composite deck",
+    label: "Composite Deck",
     before: {
       src: "/images/before-after/deck-before.jpg",
       alt: "Composite deck stained with dirt and marks before washing",
@@ -48,7 +48,7 @@ export const galleryPairs: GalleryPair[] = [
   {
     id: "deck-hottub",
     service: "Pressure Washing",
-    label: "Hot tub deck surround",
+    label: "Composite Deck",
     before: {
       src: "/images/before-after/deck-hottub-before.jpg",
       alt: "Composite deck boards around a hot tub covered in dirt and grime before washing",
@@ -61,7 +61,7 @@ export const galleryPairs: GalleryPair[] = [
   {
     id: "gutter",
     service: "Gutter Cleaning",
-    label: "Roof gutter",
+    label: "Gutter Debris",
     before: {
       src: "/images/before-after/gutter-before.jpg",
       alt: "Roof gutter packed with pine needles and debris before cleaning",
@@ -74,7 +74,7 @@ export const galleryPairs: GalleryPair[] = [
   {
     id: "skylight",
     service: "Window Cleaning",
-    label: "Skylight glass",
+    label: "Skylight Glass",
     before: {
       src: "/images/before-after/skylight-before.jpg",
       alt: "Skylight glass hazy with dirt and residue before cleaning",
@@ -94,16 +94,16 @@ export const jobPhotos: JobPhoto[] = [
   {
     src: "/images/gallery/residential-window-cleaning-result.jpg",
     alt: "Clean window facade on a residential home in Greater Victoria",
-    label: "Window cleaning result",
+    label: "Window Cleaning Result",
   },
   {
     src: "/images/gallery/high-window-pole-cleaning.jpg",
     alt: "Cleaning tall exterior windows with a water-fed pole",
-    label: "High windows, pure-water pole",
+    label: "Pure Water Window Cleaning",
   },
   {
     src: "/images/gallery/washed-concrete-driveway.jpg",
     alt: "Freshly washed exposed-aggregate driveway in front of a garage",
-    label: "Pressure-washed driveway",
+    label: "Pressure-Washed Driveway",
   },
 ];
